@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Team {
+  id           String        @id @default(cuid())
+  adminWallet  String        @unique
+  repoName     String
+  treasuryPda  String?       // ADD ? — PDA created after team setup
+  createdAt    DateTime      @default(now())
+  members      Member[]
+  transactions Transaction[]
+}
+
+model Member {
+  id       String   @id @default(cuid())
+  githubUsername String
+  walletAddress  String
+  teamId         String
+  team           Team     @relation(fields: [teamId], references: [id])
+  addedAt        DateTime @default(now())
+  
+  // ADD THESE for future phases
+  verified       Boolean  @default(false)
+  inviteToken    String?
+  
+  //prevent duplicate member in same team
+  @@unique([teamId, githubUsername])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  teamId      String
+  toWallet    String
+  amountSol   Float
+  amountUsd   Float
+  reason      String?
+  txSignature String?
+  status      TransactionStatus @default(PENDING)
+  initiatedBy String
+  createdAt   DateTime @default(now())
+  team        Team     @relation(fields: [teamId], references: [id])
+}
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  CONFIRMED
+  FAILED
+}
