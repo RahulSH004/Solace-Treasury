@@ -16,6 +16,7 @@ model Team {
   id           String        @id @default(cuid())
   adminWallet  String        @unique
   repoName     String
+  repoOwner    String
   treasuryPda  String?       // ADD ? — PDA created after team setup
   createdAt    DateTime      @default(now())
   members      Member[]
@@ -33,9 +34,10 @@ model Member {
   // ADD THESE for future phases
   verified       Boolean  @default(false)
   inviteToken    String?
-  
+  transactions    Transaction[]
   //prevent duplicate member in same team
   @@unique([teamId, githubUsername])
+  @@index([teamId])
 }
 
 model Transaction {
@@ -47,9 +49,12 @@ model Transaction {
   reason      String?
   txSignature String?
   status      TransactionStatus @default(PENDING)
-  initiatedBy String
+  initiatedBy String //by wallet 
   createdAt   DateTime @default(now())
+  memberId  String?
+  member    Member? @relation(fields: [memberId], references: [id])
   team        Team     @relation(fields: [teamId], references: [id])
+  @@index([teamId])
 }
 enum TransactionStatus {
   PENDING
