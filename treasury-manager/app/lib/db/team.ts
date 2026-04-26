@@ -31,11 +31,11 @@ export async function getTeamByAdminWallet(adminWallet: string){
 }
 
 export async function updateTreasuryPda(
-  teamId: string,
+  adminWallet: string,
   treasuryPda: string
 ) {
   return await prisma.team.update({
-    where: { id: teamId },
+    where: {adminWallet} ,
     data: { treasuryPda }
   })
 }
