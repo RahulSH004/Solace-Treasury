@@ -6,11 +6,11 @@ solana_version = "2.1.0"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
+[programs.devnet]
 solana_agent_treasury = "8eKmiTpTKYCkQiM1xLTkyqFD6f4Gf7a5kJzYbPDeJzEM"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
