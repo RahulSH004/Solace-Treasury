@@ -3,7 +3,7 @@ import { prisma } from "../prisma"
 export async function saveTransaction(
     data: {
         teamId: string,
-        memberId: string,
+        memberId?: string,
         toWallet: string
         amountSol: number
         amountUsd: number
@@ -30,7 +30,7 @@ export async function saveTransaction(
 
 export async function updateTransactionStatus(
     transactionId: string,
-    status: 'PENDING' | 'CONFIRMED',
+    status: 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'FAILED',
     txSignature?: string
 ) {
     return await prisma.transaction.update({
