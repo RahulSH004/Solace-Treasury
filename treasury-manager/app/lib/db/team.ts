@@ -24,10 +24,20 @@ export async function createTeam(
    }
 }
 
-export async function getTeamByAdminWallet(adminWallet: string){
-    return await prisma.team.findUnique({
-        where: { adminWallet}
-    })
+export async function getTeamByAdminWallet(adminWallet: string, retries = 1): Promise<any> {
+    try {
+        return await prisma.team.findUnique({
+            where: { adminWallet }
+        })
+    } catch (error: any) {
+        if (error.code === 'ETIMEDOUT' && retries > 0) {
+            console.log("Database cold start timeout, retrying...");
+            // Wait 2 seconds for Neon to finish waking up
+            await new Promise(res => setTimeout(res, 2000));
+            return getTeamByAdminWallet(adminWallet, retries - 1);
+        }
+        throw error;
+    }
 }
 
 export async function updateTreasuryPda(

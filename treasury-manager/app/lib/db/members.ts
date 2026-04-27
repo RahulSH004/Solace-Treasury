@@ -20,16 +20,17 @@ export async function addMember(
 export async function resolveWallet(
   githubUsername: string,
   teamId: string
-): Promise<string | null>{
+): Promise<{ id: string; walletAddress: string } | null>{
     return await prisma.member.findFirst({
         where: {
             githubUsername,
             teamId
         },
         select: {
+            id: true,
             walletAddress: true
         }
-    }).then(member => member?.walletAddress ?? null)
+    })
 }
 
 export async function getMembers(teamId: string) {
