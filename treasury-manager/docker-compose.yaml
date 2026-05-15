@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: treasury-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: treasury
+    ports:
+      - "5433:5432"
+    volumes:
+      - treasury_pg_data:/var/lib/postgresql/data
+
+volumes:
+  treasury_pg_data:

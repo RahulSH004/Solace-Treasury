@@ -1,14 +1,29 @@
+'use client'
+
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Copy, Check } from 'lucide-react'
+import { InitializeTreasury } from './InitializeTreasury'
 
 interface TeamInfoProps {
   repoOwner: string
   repoName: string
   treasuryPda: string | null
   adminWallet: string
+  onInitialized: (pda: string) => void
 }
 
-export function TeamInfo({ repoOwner, repoName, treasuryPda, adminWallet }: TeamInfoProps) {
+export function TeamInfo({ repoOwner, repoName, treasuryPda, adminWallet, onInitialized }: TeamInfoProps) {
+  const [copied, setCopied] = useState(false)
+
+  function copyPda() {
+    if (!treasuryPda) return
+    navigator.clipboard.writeText(treasuryPda)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <Card className="border-purple-100">
       <CardHeader>
@@ -37,9 +52,25 @@ export function TeamInfo({ repoOwner, repoName, treasuryPda, adminWallet }: Team
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">Treasury PDA</span>
-          <span className="text-xs font-mono text-gray-400">
-            {treasuryPda ? `${treasuryPda.slice(0, 6)}...${treasuryPda.slice(-4)}` : 'Not initialized'}
-          </span>
+          {treasuryPda ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-gray-400">
+                {treasuryPda.slice(0, 6)}...{treasuryPda.slice(-4)}
+              </span>
+              <button
+                onClick={copyPda}
+                className="text-gray-400 hover:text-purple-600 transition-colors"
+              >
+                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+              </button>
+            </div>
+          ) : (
+            <InitializeTreasury
+              teamName={repoName}
+              adminWallet={adminWallet}
+              onInitialized={onInitialized}
+            />
+          )}
         </div>
       </CardContent>
     </Card>

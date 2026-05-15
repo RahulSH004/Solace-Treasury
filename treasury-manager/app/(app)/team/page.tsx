@@ -62,6 +62,9 @@ export default function TeamPage() {
           repoName={team.repoName}
           treasuryPda={team.treasuryPda}
           adminWallet={adminWallet}
+          onInitialized={(pda) => {
+            setTeam((prev: any) => ({ ...prev, treasuryPda: pda }))
+          }}
         />
         <MembersList
           members={members}
