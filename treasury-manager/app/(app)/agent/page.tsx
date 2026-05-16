@@ -11,7 +11,13 @@ interface Message {
   role: 'user' | 'agent'
   content: string
 }
-
+const suggestions = [
+  'Pay @RahulSH004 $10 for fixing the login bug',
+  'Who are the top contributors this week?',
+  'What is the current SOL price in USD?',
+  'Pay the highest contributor $20',
+  'Show recent pull requests',
+]
 export default function AgentPage() {
   const { publicKey } = useWallet()
   const adminWallet = publicKey?.toString() ?? ''
@@ -108,7 +114,17 @@ export default function AgentPage() {
         )}
         <div ref={bottomRef} />
       </div>
-
+      <div className="flex flex-wrap gap-2 pb-3">
+        {suggestions.map((s) => (
+          <button
+            key={s}
+            onClick={() => setInput(s)}
+            className="text-xs bg-purple-50 text-purple-600 px-3 py-1 rounded-full hover:bg-purple-100 transition-colors"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
       {/* Input */}
       <div className="flex gap-3 pt-4 border-t border-purple-100">
         <Textarea

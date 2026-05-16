@@ -97,7 +97,7 @@ export async function executeTool(
 
     case 'get_github_prs': {
       const res = await fetch(
-        `https://api.github.com/repos/${toolArgs.repoOwner}/${toolArgs.repoName}/pulls?state=closed&per_page=10`,
+        `https://api.github.com/repos/${toolArgs.repoOwner}/${toolArgs.repoName}/pulls?state=closed&per_page=100`,
         {
           headers: {
             Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
@@ -105,13 +105,32 @@ export async function executeTool(
           }
         }
       )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        return { error: err.message ?? `GitHub API error (${res.status})` }
+      }
       const prs = await res.json()
-      // Sirf relevant info return karo — poora GitHub response nahi
+      if (!Array.isArray(prs)) {
+        return { error: 'Unexpected GitHub API response' }
+      }
+      const contributorMap: Record<string, number> = {}
+      for (const pr of prs) {
+        if (pr.merged_at && pr.user?.login) {
+          const author = pr.user.login
+          contributorMap[author] = (contributorMap[author] ?? 0) + 1
+        }
+      }
+      const contributors = Object.entries(contributorMap)
+        .map(([username, mergedPrs]) => ({ username, mergedPrs }))
+        .sort((a, b) => b.mergedPrs - a.mergedPrs)
       return {
-        pullRequests: prs.map((pr: any) => ({
+        contributors,
+        topContributor: contributors[0] ?? null,
+        totalMergedPrs: prs.filter((pr: any) => pr.merged_at).length,
+        recentPrs: prs.slice(0, 5).map((pr: any) => ({
           number: pr.number,
           title: pr.title,
-          author: pr.user.login,
+          author: pr.user?.login,
           mergedAt: pr.merged_at
         }))
       }

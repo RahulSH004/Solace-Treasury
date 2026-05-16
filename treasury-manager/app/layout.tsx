@@ -1,6 +1,6 @@
 import './globals.css'
-import { Providers } from './providers'
 import '@solana/wallet-adapter-react-ui/styles.css'
+import { Providers } from './providers'
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 

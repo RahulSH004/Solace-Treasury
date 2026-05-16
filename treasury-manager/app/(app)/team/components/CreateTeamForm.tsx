@@ -1,9 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession, signIn } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+
+interface Repo {
+  name: string
+  owner: string
+  private: boolean
+  description: string | null
+}
 
 interface CreateTeamFormProps {
   adminWallet: string
@@ -11,16 +18,26 @@ interface CreateTeamFormProps {
 }
 
 export function CreateTeamForm({ adminWallet, onTeamCreated }: CreateTeamFormProps) {
-  const [repoOwner, setRepoOwner] = useState('')
-  const [repoName, setRepoName] = useState('')
+  const { data: session } = useSession()
+  const [repos, setRepos] = useState<Repo[]>([])
+  const [selected, setSelected] = useState<Repo | null>(null)
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleSubmit() {
-    if (!repoOwner.trim() || !repoName.trim()) {
-      setError('Both fields are required')
-      return
-    }
+  // GitHub connected hone pe repos fetch karo
+  useEffect(() => {
+    if (!session?.accessToken) return
+    setFetching(true)
+
+    fetch('/api/github/repos')
+      .then(r => r.json())
+      .then(data => setRepos(data.repos ?? []))
+      .finally(() => setFetching(false))
+  }, [session?.accessToken])
+
+  async function handleCreate() {
+    if (!selected) return
     setLoading(true)
     setError('')
 
@@ -28,10 +45,13 @@ export function CreateTeamForm({ adminWallet, onTeamCreated }: CreateTeamFormPro
       const res = await fetch('/api/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminWallet, repoOwner, repoName })
+        body: JSON.stringify({
+          adminWallet,
+          repoOwner: selected.owner,
+          repoName: selected.name
+        })
       })
       const data = await res.json()
-
       if (!res.ok) {
         setError(data.error ?? 'Something went wrong')
         return
@@ -50,45 +70,59 @@ export function CreateTeamForm({ adminWallet, onTeamCreated }: CreateTeamFormPro
         <CardHeader>
           <CardTitle className="text-xl text-gray-900">Create Your Team</CardTitle>
           <p className="text-sm text-gray-400">
-            Connect your GitHub repository to get started
+            Connect GitHub to select your repository
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              GitHub Owner
-            </label>
-            <Input
-              placeholder="e.g. RahulSH004"
-              value={repoOwner}
-              onChange={(e) => setRepoOwner(e.target.value)}
-              className="border-purple-100 focus-visible:ring-purple-400"
-            />
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Repository Name
-            </label>
-            <Input
-              placeholder="e.g. Solace"
-              value={repoName}
-              onChange={(e) => setRepoName(e.target.value)}
-              className="border-purple-100 focus-visible:ring-purple-400"
-            />
-          </div>
+          {/* GitHub connect nahi hai */}
+          {!session ? (
+            <Button
+              onClick={() => signIn('github')}
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white"
+            >
+              Connect GitHub
+            </Button>
+          ) : fetching ? (
+            <p className="text-sm text-gray-400 text-center py-4">
+              Fetching your repos...
+            </p>
+          ) : (
+            <>
+              {/* GitHub connected — repos list */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {repos.map((repo) => (
+                  <button
+                    key={`${repo.owner}/${repo.name}`}
+                    onClick={() => setSelected(repo)}
+                    className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                      selected?.name === repo.name
+                        ? 'border-purple-400 bg-purple-50'
+                        : 'border-purple-100 hover:border-purple-300'
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-gray-900">
+                      {repo.owner}/{repo.name}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {repo.private ? '🔒 Private' : '🌐 Public'}
+                      {repo.description && ` — ${repo.description}`}
+                    </p>
+                  </button>
+                ))}
+              </div>
 
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+
+              <Button
+                onClick={handleCreate}
+                disabled={loading || !selected}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {loading ? 'Creating...' : 'Create Team'}
+              </Button>
+            </>
           )}
-
-          <Button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            {loading ? 'Creating...' : 'Create Team'}
-          </Button>
         </CardContent>
       </Card>
     </div>

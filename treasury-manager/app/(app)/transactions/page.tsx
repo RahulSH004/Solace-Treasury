@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ExecuteTransfer } from './components/ExecuteTransfer'
+import { TransactionDetail } from './components/TransactionDetail'
 
 type Status = 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'FAILED'
 type Filter = 'ALL' | Status
@@ -38,21 +39,8 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [filter, setFilter] = useState<Filter>('ALL')
   const [loading, setLoading] = useState(true)
-
-  const fetchTransactions = useCallback(async () => {
-    if (!adminWallet) return
-    try {
-      const res = await fetch(`/api/transactions?adminWallet=${adminWallet}`)
-      if (res.ok) {
-        const data = await res.json()
-        setTransactions(data.transactions)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [adminWallet])
-
-  // fetchTransactions ke saath team bhi fetch karo
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
   const [team, setTeam] = useState<any>(null)
 
   const fetchData = useCallback(async () => {
@@ -73,22 +61,18 @@ export default function TransactionsPage() {
   }, [adminWallet])
   useEffect(() => { fetchData() }, [fetchData])
 
-  async function handleApprove(txId: string) {
-    await fetch(`/api/transactions/${txId}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'APPROVED' })
-    })
-    fetchTransactions()
-  }
-
   async function handleFail(txId: string) {
     await fetch(`/api/transactions/${txId}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'FAILED' })
     })
-    fetchTransactions()
+    fetchData()
+  }
+
+  function openDetail(tx: Transaction) {
+    setSelectedTx(tx)
+    setDetailOpen(true)
   }
 
   const filtered = filter === 'ALL'
@@ -169,7 +153,13 @@ export default function TransactionsPage() {
               {filtered.map(tx => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between py-3 border-b border-purple-50 last:border-0"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openDetail(tx)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') openDetail(tx)
+                  }}
+                  className="flex items-center justify-between py-3 border-b border-purple-50 last:border-0 cursor-pointer hover:bg-purple-50/50 rounded-md px-2 -mx-2 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
@@ -200,7 +190,11 @@ export default function TransactionsPage() {
 
                     {/* Approve / Reject — PENDING only */}
                     {tx.status === 'PENDING' && team && (
-                      <div className="flex gap-2">
+                      <div
+                        className="flex gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
                         <ExecuteTransfer
                           transactionId={tx.id}
                           teamName={team.repoName}
@@ -212,7 +206,10 @@ export default function TransactionsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleFail(tx.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleFail(tx.id)
+                          }}
                           className="border-red-200 text-red-500 hover:bg-red-50 h-7 text-xs"
                         >
                           Reject
@@ -226,6 +223,12 @@ export default function TransactionsPage() {
           )}
         </CardContent>
       </Card>
+
+      <TransactionDetail
+        tx={selectedTx}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+      />
     </div>
   )
 }
