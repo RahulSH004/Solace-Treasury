@@ -6,14 +6,23 @@ import { useEffect, useState } from 'react'
 import { RefreshCw, TrendingUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { FaGithub } from 'react-icons/fa'
+import { TreasuryMiniChart } from './TreasuryMiniChart'
+import { ContributionHeatmap } from './ContributionHeatmap'
+
+interface Transaction {
+  amountSol: number
+  status: string
+  createdAt: string
+}
 
 interface TreasuryCardProps {
   repoOwner: string
   repoName: string
   treasuryPda: string | null
+  transactions?: Transaction[]
 }
 
-export function TreasuryCard({ repoOwner, repoName, treasuryPda }: TreasuryCardProps) {
+export function TreasuryCard({ repoOwner, repoName, treasuryPda, transactions = [] }: TreasuryCardProps) {
   const { connection } = useConnection()
   const [solBalance, setSolBalance] = useState<number | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -90,6 +99,10 @@ export function TreasuryCard({ repoOwner, repoName, treasuryPda }: TreasuryCardP
                 <p className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-2 truncate">
                   {treasuryPda.slice(0, 16)}...{treasuryPda.slice(-8)}
                 </p>
+                <TreasuryMiniChart
+                  transactions={transactions}
+                  currentBalance={solBalance}
+                />
               </div>
             ) : (
               <div className="space-y-2 mt-2">
@@ -135,6 +148,14 @@ export function TreasuryCard({ repoOwner, repoName, treasuryPda }: TreasuryCardP
             </Badge>
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-xs text-gray-400 dark:text-gray-500">Connected</span>
+          </div>
+
+          {/* Contribution heatmap — blends into card with bottom fade */}
+          <div className="relative mt-1 -mx-1">
+            <ContributionHeatmap repoOwner={repoOwner} repoName={repoName} />
+            {/* Soft fade edges so heatmap dissolves into card */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-white dark:from-[#111111] to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white dark:from-[#111111] to-transparent" />
           </div>
         </div>
       </div>

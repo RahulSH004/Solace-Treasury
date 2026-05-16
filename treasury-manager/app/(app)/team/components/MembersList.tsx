@@ -45,7 +45,7 @@ export function MembersList({ members, teamId, onMemberAdded }: MembersListProps
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     @{member.githubUsername}
                   </p>
-                  <p className="text-xs text-gray-400 font-mono truncate">
+                  <p className="text-xs text-gray-400 font-mono truncate dark:text-gray-500">
                     {member.walletAddress.slice(0, 6)}...{member.walletAddress.slice(-4)}
                   </p>
                 </div>

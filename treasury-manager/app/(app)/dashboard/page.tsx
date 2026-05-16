@@ -85,6 +85,7 @@ export default function Dashboard() {
         repoOwner={team.repoOwner}
         repoName={team.repoName}
         treasuryPda={team.treasuryPda}
+        transactions={transactions}
       />
       <AgentCommand
         adminWallet={adminWallet}
