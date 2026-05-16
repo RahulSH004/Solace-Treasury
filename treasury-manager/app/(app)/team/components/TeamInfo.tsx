@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Copy, Check } from 'lucide-react'
 import { InitializeTreasury } from './InitializeTreasury'
+import { DepositSol } from './DepositSol'
 
 interface TeamInfoProps {
   repoOwner: string
@@ -30,6 +31,13 @@ export function TeamInfo({ repoOwner, repoName, treasuryPda, adminWallet, onInit
         <CardTitle className="text-base font-semibold text-gray-900">
           Team Info
         </CardTitle>
+        {treasuryPda && (
+          <DepositSol
+            teamName={repoName}
+            treasuryPda={treasuryPda}
+            onDeposited={() => onInitialized(treasuryPda)}  // balance refresh karega
+          />
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between">

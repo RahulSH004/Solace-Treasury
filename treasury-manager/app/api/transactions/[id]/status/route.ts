@@ -1,9 +1,9 @@
 import {NextResponse, NextRequest} from 'next/server';
 import { updateTransactionStatus } from '@/app/lib/db/transcation'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try{
-        const transactionId = params.id
+        const { id: transactionId } = await params
         const body = await req.json()
         const { status, txSignature } = body
 
@@ -27,7 +27,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             { status: 200 }
         )
     }catch (error) {
-        console.error(`[PATCH /api/transactions/${params.id}/status]`, error)
+        const { id } = await params
+        console.error(`[PATCH /api/transactions/${id}/status]`, error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 }

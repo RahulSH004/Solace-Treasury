@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { ExecuteTransfer } from './components/ExecuteTransfer'
 
 type Status = 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'FAILED'
 type Filter = 'ALL' | Status
@@ -22,10 +23,10 @@ interface Transaction {
 }
 
 const statusColor: Record<Status, string> = {
-  PENDING:   'bg-yellow-50 text-yellow-700 border-yellow-200',
-  APPROVED:  'bg-blue-50 text-blue-700 border-blue-200',
+  PENDING: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  APPROVED: 'bg-blue-50 text-blue-700 border-blue-200',
   CONFIRMED: 'bg-green-50 text-green-700 border-green-200',
-  FAILED:    'bg-red-50 text-red-700 border-red-200',
+  FAILED: 'bg-red-50 text-red-700 border-red-200',
 }
 
 const filters: Filter[] = ['ALL', 'PENDING', 'APPROVED', 'CONFIRMED', 'FAILED']
@@ -51,7 +52,26 @@ export default function TransactionsPage() {
     }
   }, [adminWallet])
 
-  useEffect(() => { fetchTransactions() }, [fetchTransactions])
+  // fetchTransactions ke saath team bhi fetch karo
+  const [team, setTeam] = useState<any>(null)
+
+  const fetchData = useCallback(async () => {
+    if (!adminWallet) return
+    try {
+      const [teamRes, txRes] = await Promise.all([
+        fetch(`/api/teams?adminWallet=${adminWallet}`),
+        fetch(`/api/transactions?adminWallet=${adminWallet}`)
+      ])
+      if (teamRes.ok) setTeam(await teamRes.json())
+      if (txRes.ok) {
+        const data = await txRes.json()
+        setTransactions(data.transactions)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [adminWallet])
+  useEffect(() => { fetchData() }, [fetchData])
 
   async function handleApprove(txId: string) {
     await fetch(`/api/transactions/${txId}/status`, {
@@ -179,15 +199,16 @@ export default function TransactionsPage() {
                     </Badge>
 
                     {/* Approve / Reject — PENDING only */}
-                    {tx.status === 'PENDING' && (
+                    {tx.status === 'PENDING' && team && (
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleApprove(tx.id)}
-                          className="bg-purple-600 hover:bg-purple-700 text-white h-7 text-xs"
-                        >
-                          Approve
-                        </Button>
+                        <ExecuteTransfer
+                          transactionId={tx.id}
+                          teamName={team.repoName}
+                          treasuryPda={team.treasuryPda}
+                          recipientWallet={tx.toWallet}
+                          amountSol={tx.amountSol}
+                          onSuccess={fetchData}
+                        />
                         <Button
                           size="sm"
                           variant="outline"

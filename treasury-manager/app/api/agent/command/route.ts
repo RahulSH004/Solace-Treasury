@@ -1,6 +1,9 @@
+import Groq from 'groq-sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { toolDeclarations, executeTool } from '@/app/lib/agent/tools'
 import { getTeamByAdminWallet } from '@/app/lib/db/team'
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,10 +34,10 @@ export async function POST(req: NextRequest) {
       - Admin Wallet: ${adminWallet}
       
       Rules:
-      - Always resolve wallet before saving a transaction
-      - Always get SOL price before saving a transaction
-      - Never save a transaction without both wallet and SOL price
-      - If member not found, say so clearly — do not proceed
+      - ALWAYS call resolve_wallet first to get memberId
+      - ALWAYS call get_sol_price before save_transaction
+      - Call save_transaction with memberId from resolve_wallet — NEVER invent toWallet or memberId
+      - If member not found, stop and say so clearly
       - Be concise in your final response
     `
 
@@ -50,30 +53,29 @@ export async function POST(req: NextRequest) {
     while (iterations < MAX_ITERATIONS) {
       iterations++
 
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'x-ai/grok-4.1-fast',
-          messages,
-          tools: toolDeclarations,
-          tool_choice: 'auto'
-        })
+      const result = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: messages,
+        tools: toolDeclarations.map(t => ({
+          type: 'function',
+          function: {
+            name: t.function.name,
+            description: t.function.description,
+            parameters: t.function.parameters
+          }
+        })),
+        tool_choice: 'auto'
       })
 
-      const data = await res.json()
+      const data = result.choices?.[0]?.message
       console.log('[Agent] Raw response:', JSON.stringify(data, null, 2))  // ← add karo
-      const message = data.choices?.[0]?.message
       // Tool calls hain?
-      if (message?.tool_calls && message.tool_calls.length > 0) {
+      if (data?.tool_calls && data.tool_calls.length > 0) {
         // Model ka response history mein daalo
-        messages.push(message)
+        messages.push(data)
 
         // Har tool execute karo
-        for (const toolCall of message.tool_calls) {
+        for (const toolCall of data.tool_calls) {
           const name = toolCall.function.name
           const args = JSON.parse(toolCall.function.arguments)
           console.log(`[Agent] Executing tool: ${name}`, args)
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
         }
       } else {
         // Koi tool call nahi
-        finalResponse = message?.content ?? ''
+        finalResponse = data?.content ?? ''
         break
       }
     }

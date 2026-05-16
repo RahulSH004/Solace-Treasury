@@ -1,16 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { saveTransaction, getTransactions } from '@/app/lib/db/transcation'
 import { getTeamByAdminWallet } from '@/app/lib/db/team'
+import { parseSolanaAddress } from '@/app/lib/solana-address'
+import { getMemberByIdForTeam } from '@/app/lib/db/members'
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
-        const { teamId, initiatedBy, toWallet, memberId, amountSol, amountUsd, reason } = body
+        const { teamId, initiatedBy, memberId, amountSol, amountUsd, reason } = body
+        let { toWallet } = body
 
         if (!teamId || !initiatedBy || !toWallet || !amountSol || !reason) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
-
+        if (memberId) {
+            const member = await getMemberByIdForTeam(memberId, teamId)
+            if (!member) {
+              return NextResponse.json(
+                { error: 'Member not found' },
+                { status: 404 }
+              )
+            }
+            toWallet = member.walletAddress
+          } else {
+            // toWallet validate karo
+            try {
+              toWallet = parseSolanaAddress(toWallet)
+            } catch (e: any) {
+              return NextResponse.json(
+                { error: e.message },
+                { status: 400 }
+              )
+            }
+          }
+      
         const transaction = await saveTransaction({
             teamId,
             toWallet,

@@ -39,3 +39,12 @@ export async function getMembers(teamId: string) {
     orderBy: { addedAt: 'desc' }
   })
 }
+export async function getMemberByIdForTeam(
+  memberId: string,
+  teamId: string
+): Promise<{ id: string; walletAddress: string } | null> {
+  return prisma.member.findFirst({
+    where: { id: memberId, teamId },
+    select: { id: true, walletAddress: true }
+  })
+}
