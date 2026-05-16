@@ -19,11 +19,13 @@ export default function AppLayout({
   }, [connected])
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
       {/* Main content — sidebar ke right mein */}
-      <main className="ml-56 flex-1 p-8">
-        {children}
+      <main className="ml-56 flex-1 p-8 max-w-[calc(100%-14rem)]">
+        <div className="max-w-4xl mx-auto">
+          {children}
+        </div>
       </main>
     </div>
   )

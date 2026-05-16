@@ -2,15 +2,16 @@
 
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useState, useRef, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Send } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Send, Sparkles } from 'lucide-react'
+import { ChatBubble, TypingIndicator } from './components/ChatBubble'
+import { SuggestionChips } from './components/SuggestionChips'
 
 interface Message {
   role: 'user' | 'agent'
   content: string
 }
+
 const suggestions = [
   'Pay @RahulSH004 $10 for fixing the login bug',
   'Who are the top contributors this week?',
@@ -18,6 +19,7 @@ const suggestions = [
   'Pay the highest contributor $20',
   'Show recent pull requests',
 ]
+
 export default function AgentPage() {
   const { publicKey } = useWallet()
   const adminWallet = publicKey?.toString() ?? ''
@@ -35,7 +37,7 @@ export default function AgentPage() {
   // Auto scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, loading])
 
   async function handleSend() {
     if (!input.trim() || loading) return
@@ -74,74 +76,56 @@ export default function AgentPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">Agent</h1>
+    <div className="flex flex-col h-[calc(100vh-5rem)]">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6 flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shadow-md shadow-purple-500/20">
+          <Sparkles size={18} className="text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
+            Agent
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Natural language treasury commands
+          </p>
+        </div>
+      </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+      {/* Chat area */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin space-y-4 pb-4 pr-1">
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={cn(
-              'flex',
-              msg.role === 'user' ? 'justify-end' : 'justify-start'
-            )}
-          >
-            <div
-              className={cn(
-                'max-w-lg px-4 py-3 rounded-2xl text-sm',
-                msg.role === 'user'
-                  ? 'bg-purple-600 text-white rounded-br-sm'
-                  : 'bg-white border border-purple-100 text-gray-800 rounded-bl-sm'
-              )}
-            >
-              {msg.content}
-            </div>
-          </div>
+          <ChatBubble key={i} role={msg.role} content={msg.content} />
         ))}
-
-        {/* Loading indicator */}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-purple-100 px-4 py-3 rounded-2xl rounded-bl-sm">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce [animation-delay:300ms]" />
-              </div>
-            </div>
-          </div>
-        )}
+        {loading && <TypingIndicator />}
         <div ref={bottomRef} />
       </div>
-      <div className="flex flex-wrap gap-2 pb-3">
-        {suggestions.map((s) => (
+
+      {/* Bottom input area */}
+      <div className="flex-shrink-0 pt-4 space-y-3 border-t border-gray-100 dark:border-white/[0.05]">
+        {/* Suggestion chips */}
+        <SuggestionChips suggestions={suggestions} onSelect={setInput} />
+
+        {/* Input row */}
+        <div className="flex gap-3 items-end">
+          <div className="flex-1 relative">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a command... (Enter to send, Shift+Enter for newline)"
+              className="resize-none border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] focus-visible:ring-purple-400 focus-visible:border-purple-400 text-sm rounded-xl min-h-[56px] pr-4"
+              rows={2}
+            />
+          </div>
           <button
-            key={s}
-            onClick={() => setInput(s)}
-            className="text-xs bg-purple-50 text-purple-600 px-3 py-1 rounded-full hover:bg-purple-100 transition-colors"
+            onClick={handleSend}
+            disabled={loading || !input.trim()}
+            className="flex-shrink-0 w-11 h-11 rounded-xl solace-gradient-bg flex items-center justify-center shadow-md shadow-purple-500/20 hover:brightness-110 hover:scale-105 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
           >
-            {s}
+            <Send size={16} className="text-white" />
           </button>
-        ))}
-      </div>
-      {/* Input */}
-      <div className="flex gap-3 pt-4 border-t border-purple-100">
-        <Textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a command... (Enter to send)"
-          className="flex-1 border-purple-100 focus-visible:ring-purple-400 resize-none"
-          rows={2}
-        />
-        <Button
-          onClick={handleSend}
-          disabled={loading || !input.trim()}
-          className="bg-purple-600 hover:bg-purple-700 text-white self-end"
-        >
-          <Send size={18} />
-        </Button>
+        </div>
       </div>
     </div>
   )

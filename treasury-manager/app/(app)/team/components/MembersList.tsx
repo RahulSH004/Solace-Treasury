@@ -19,14 +19,14 @@ export function MembersList({ members, teamId, onMemberAdded }: MembersListProps
   return (
     <Card className="border-purple-100">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base font-semibold text-gray-900">
+        <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
           Members ({members.length})
         </CardTitle>
         <AddMemberDialog teamId={teamId} onMemberAdded={onMemberAdded} />
       </CardHeader>
       <CardContent>
         {members.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">
             No members yet. Add your first member.
           </p>
         ) : (
@@ -42,7 +42,7 @@ export function MembersList({ members, teamId, onMemberAdded }: MembersListProps
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
                     @{member.githubUsername}
                   </p>
                   <p className="text-xs text-gray-400 font-mono truncate">

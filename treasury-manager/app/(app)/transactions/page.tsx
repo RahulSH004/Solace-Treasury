@@ -2,12 +2,13 @@
 
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useCallback, useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { ArrowLeftRight } from 'lucide-react'
 import { ExecuteTransfer } from './components/ExecuteTransfer'
 import { TransactionDetail } from './components/TransactionDetail'
+import { TransactionRow } from './components/TransactionRow'
+import { StatusBadge } from './components/StatusBadge'
 
 type Status = 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'FAILED'
 type Filter = 'ALL' | Status
@@ -21,13 +22,6 @@ interface Transaction {
   createdAt: string
   toWallet: string
   txSignature: string | null
-}
-
-const statusColor: Record<Status, string> = {
-  PENDING: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  APPROVED: 'bg-blue-50 text-blue-700 border-blue-200',
-  CONFIRMED: 'bg-green-50 text-green-700 border-green-200',
-  FAILED: 'bg-red-50 text-red-700 border-red-200',
 }
 
 const filters: Filter[] = ['ALL', 'PENDING', 'APPROVED', 'CONFIRMED', 'FAILED']
@@ -59,6 +53,7 @@ export default function TransactionsPage() {
       setLoading(false)
     }
   }, [adminWallet])
+
   useEffect(() => { fetchData() }, [fetchData])
 
   async function handleFail(txId: string) {
@@ -87,142 +82,135 @@ export default function TransactionsPage() {
   const pending = transactions.filter(tx => tx.status === 'PENDING').length
 
   if (loading) return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-purple-600">Loading...</p>
+    <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex gap-1.5">
+          <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:0ms]" />
+          <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:150ms]" />
+          <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:300ms]" />
+        </div>
+        <p className="text-sm text-gray-400 dark:text-gray-500">Loading transactions...</p>
+      </div>
     </div>
   )
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="border-purple-100">
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500">Total Sent</p>
-            <p className="text-2xl font-bold text-gray-900">{totalSol.toFixed(2)} SOL</p>
-          </CardContent>
-        </Card>
-        <Card className="border-purple-100">
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500">Pending Approvals</p>
-            <p className="text-2xl font-bold text-yellow-600">{pending}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-purple-100">
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-500">Total Transactions</p>
-            <p className="text-2xl font-bold text-gray-900">{transactions.length}</p>
-          </CardContent>
-        </Card>
+    <div className="space-y-6 animate-slide-up">
+      {/* Page header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shadow-md shadow-purple-500/20">
+          <ArrowLeftRight size={18} className="text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
+            Transactions
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            All treasury payments and transfers.
+          </p>
+        </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2">
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: 'Total Sent', value: `${totalSol.toFixed(2)} SOL`, accent: false },
+          { label: 'Pending Approvals', value: String(pending), accent: true },
+          { label: 'Total Transactions', value: String(transactions.length), accent: false },
+        ].map(({ label, value, accent }) => (
+          <div
+            key={label}
+            className="rounded-2xl bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] card-shadow p-5"
+          >
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">{label}</p>
+            <p className={`text-2xl font-semibold ${accent ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-white'}`}>
+              {value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-1.5 flex-wrap">
         {filters.map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={cn(
-              'px-3 py-1 rounded-full text-sm font-medium transition-colors',
+              'px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150',
               filter === f
-                ? 'bg-purple-600 text-white'
-                : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                ? 'solace-gradient-bg text-white shadow-sm'
+                : 'bg-gray-100 dark:bg-white/[0.06] text-gray-600 dark:text-gray-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 hover:text-purple-600 dark:hover:text-purple-400'
             )}
           >
             {f}
+            {f !== 'ALL' && (
+              <span className="ml-1 opacity-70">
+                {transactions.filter(t => t.status === f).length}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Transactions List */}
-      <Card className="border-purple-100">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-gray-900">
+      {/* Transactions table */}
+      <div className="rounded-2xl bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] card-shadow overflow-hidden">
+        {/* Table header */}
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-white/[0.05] flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
             {filter === 'ALL' ? 'All Transactions' : `${filter} Transactions`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filtered.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-6">
-              No transactions found.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map(tx => (
-                <div
-                  key={tx.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openDetail(tx)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') openDetail(tx)
-                  }}
-                  className="flex items-center justify-between py-3 border-b border-purple-50 last:border-0 cursor-pointer hover:bg-purple-50/50 rounded-md px-2 -mx-2 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {tx.reason ?? 'No reason provided'}
-                    </p>
-                    <p className="text-xs text-gray-400 font-mono">
-                      To: {tx.toWallet.slice(0, 6)}...{tx.toWallet.slice(-4)}
-                    </p>
-                    {tx.txSignature && (
-                      <p className="text-xs text-purple-400 font-mono">
-                        Sig: {tx.txSignature.slice(0, 8)}...
-                      </p>
-                    )}
-                  </div>
+          </h3>
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+          </span>
+        </div>
 
-                  <div className="flex items-center gap-3 ml-4">
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {tx.amountSol} SOL
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        ${tx.amountUsd}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className={statusColor[tx.status]}>
-                      {tx.status}
-                    </Badge>
-
-                    {/* Approve / Reject — PENDING only */}
-                    {tx.status === 'PENDING' && team && (
-                      <div
-                        className="flex gap-2"
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                      >
-                        <ExecuteTransfer
-                          transactionId={tx.id}
-                          teamName={team.repoName}
-                          treasuryPda={team.treasuryPda}
-                          recipientWallet={tx.toWallet}
-                          amountSol={tx.amountSol}
-                          onSuccess={fetchData}
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleFail(tx.id)
-                          }}
-                          className="border-red-200 text-red-500 hover:bg-red-50 h-7 text-xs"
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+        {filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center">
+            <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center mx-auto mb-3">
+              <ArrowLeftRight size={20} className="text-purple-400" />
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <p className="text-sm text-gray-400 dark:text-gray-500">No transactions found.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50 dark:divide-white/[0.03]">
+            {filtered.map(tx => (
+              <div key={tx.id} className="relative">
+                <TransactionRow tx={tx} onClick={() => openDetail(tx)} />
+
+                {/* Approve / Reject — PENDING only — rendered below row */}
+                {tx.status === 'PENDING' && team && (
+                  <div
+                    className="flex gap-2 px-4 pb-3 -mt-1"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <ExecuteTransfer
+                      transactionId={tx.id}
+                      teamName={team.repoName}
+                      treasuryPda={team.treasuryPda}
+                      recipientWallet={tx.toWallet}
+                      amountSol={tx.amountSol}
+                      onSuccess={fetchData}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleFail(tx.id)
+                      }}
+                      className="border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 h-7 text-xs"
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <TransactionDetail
         tx={selectedTx}

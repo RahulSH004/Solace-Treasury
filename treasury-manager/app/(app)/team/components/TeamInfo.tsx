@@ -75,7 +75,7 @@ export function TeamInfo({
   return (
     <Card className="border-purple-100">
       <CardHeader>
-        <CardTitle className="text-base font-semibold text-gray-900">
+        <CardTitle className="text-base font-semibold text-gray-900 dark:text-white">
           Team Info
         </CardTitle>
         {treasuryPda && (

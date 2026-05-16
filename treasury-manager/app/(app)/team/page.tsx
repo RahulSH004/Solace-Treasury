@@ -3,6 +3,8 @@
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useSession, signIn } from 'next-auth/react'
 import { useCallback, useEffect, useState } from 'react'
+import { Users } from 'lucide-react'
+import { FaGithub } from "react-icons/fa";
 import { CreateTeamForm } from './components/CreateTeamForm'
 import { TeamInfo } from './components/TeamInfo'
 import { MembersList } from './components/MembersList'
@@ -61,31 +63,64 @@ export default function TeamPage() {
   }, [session?.accessToken, team?.githubConnected, adminWallet])
 
   if (loading) return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-purple-600">Loading...</p>
+    <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex gap-1.5">
+          <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:0ms]" />
+          <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:150ms]" />
+          <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:300ms]" />
+        </div>
+        <p className="text-sm text-gray-400 dark:text-gray-500">Loading team...</p>
+      </div>
     </div>
   )
 
   if (!team) return (
-    <CreateTeamForm
-      adminWallet={adminWallet}
-      onTeamCreated={fetchData}
-    />
+    <div className="space-y-6 animate-slide-up">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shadow-md shadow-purple-500/20">
+          <Users size={18} className="text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Team</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Create your team to get started.</p>
+        </div>
+      </div>
+      <CreateTeamForm
+        adminWallet={adminWallet}
+        onTeamCreated={fetchData}
+      />
+    </div>
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Team</h1>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shadow-md shadow-purple-500/20">
+            <Users size={18} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Team</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Manage members and treasury.</p>
+          </div>
+        </div>
+
+        {/* GitHub connection status */}
         {!session?.accessToken ? (
           <button
             onClick={() => signIn('github')}
-            className="text-sm bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800"
+            className="flex items-center gap-2 text-sm bg-gray-900 dark:bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-gray-800 dark:hover:bg-white/15 transition-colors border border-gray-700 dark:border-white/10"
           >
+            <FaGithub size={15} />
             Connect GitHub
           </button>
         ) : (
-          <p className="text-xs text-green-600 font-medium">✓ GitHub Connected</p>
+          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 px-3 py-1.5 rounded-lg">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+            GitHub Connected
+          </div>
         )}
       </div>
 
