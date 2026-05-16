@@ -2,6 +2,7 @@ import { resolveWallet } from '@/app/lib/db/members'
 import { saveTransaction } from '@/app/lib/db/transcation'
 import { getMemberByIdForTeam } from '@/app/lib/db/members'
 import { parseSolanaAddress } from '@/app/lib/solana-address'
+import { prisma } from '../prisma'
 
 //toolDeclarations OpenAI format
 export const toolDeclarations = [
@@ -41,9 +42,10 @@ export const toolDeclarations = [
         type: 'object',
         properties: {
           repoOwner: { type: 'string', description: 'GitHub repository owner' },
-          repoName: { type: 'string', description: 'GitHub repository name' }
+          repoName: { type: 'string', description: 'GitHub repository name' },
+          teamId: { type: 'string', description: 'Team ID for GitHub token lookup' }
         },
-        required: ['repoOwner', 'repoName']
+        required: ['repoOwner', 'repoName', 'teamId']
       }
     }
   },
@@ -96,23 +98,48 @@ export async function executeTool(
     }
 
     case 'get_github_prs': {
+      // Team ka token fetch karo
+      const team = await prisma.team.findUnique({
+        where: { id: toolArgs.teamId },
+        select: { githubAccessToken: true }
+      })
+
+      const token = team?.githubAccessToken
+
+      if (!token) {
+        return {
+          error:
+            'GitHub not connected. Go to the Team page and add your GitHub Personal Access Token (PAT).'
+        }
+      }
+
       const res = await fetch(
         `https://api.github.com/repos/${toolArgs.repoOwner}/${toolArgs.repoName}/pulls?state=closed&per_page=100`,
         {
           headers: {
-            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+            Authorization: `Bearer ${token}`,
             Accept: 'application/vnd.github.v3+json'
           }
         }
       )
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        return { error: err.message ?? `GitHub API error (${res.status})` }
-      }
+
       const prs = await res.json()
+
+      if (!res.ok) {
+        const message =
+          typeof prs?.message === 'string' ? prs.message : `GitHub API error (${res.status})`
+        return {
+          error:
+            res.status === 401
+              ? `${message}. Your GitHub token may be expired — reconnect GitHub on the Team page.`
+              : message
+        }
+      }
+
       if (!Array.isArray(prs)) {
         return { error: 'Unexpected GitHub API response' }
       }
+
       const contributorMap: Record<string, number> = {}
       for (const pr of prs) {
         if (pr.merged_at && pr.user?.login) {
@@ -120,9 +147,11 @@ export async function executeTool(
           contributorMap[author] = (contributorMap[author] ?? 0) + 1
         }
       }
+
       const contributors = Object.entries(contributorMap)
         .map(([username, mergedPrs]) => ({ username, mergedPrs }))
         .sort((a, b) => b.mergedPrs - a.mergedPrs)
+
       return {
         contributors,
         topContributor: contributors[0] ?? null,

@@ -96,7 +96,7 @@ export function CreateTeamForm({ adminWallet, onTeamCreated }: CreateTeamFormPro
                     key={`${repo.owner}/${repo.name}`}
                     onClick={() => setSelected(repo)}
                     className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
-                      selected?.name === repo.name
+                      selected?.owner === repo.owner && selected?.name === repo.name
                         ? 'border-purple-400 bg-purple-50'
                         : 'border-purple-100 hover:border-purple-300'
                     }`}

@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Copy, Check } from 'lucide-react'
 import { InitializeTreasury } from './InitializeTreasury'
 import { DepositSol } from './DepositSol'
@@ -12,17 +14,62 @@ interface TeamInfoProps {
   repoName: string
   treasuryPda: string | null
   adminWallet: string
+  githubConnected: boolean
   onInitialized: (pda: string) => void
+  onTokenSaved: () => void
 }
 
-export function TeamInfo({ repoOwner, repoName, treasuryPda, adminWallet, onInitialized }: TeamInfoProps) {
+export function TeamInfo({
+  repoOwner,
+  repoName,
+  treasuryPda,
+  adminWallet,
+  githubConnected,
+  onInitialized,
+  onTokenSaved
+}: TeamInfoProps) {
   const [copied, setCopied] = useState(false)
+  const [pat, setPat] = useState('')
+  const [showPatInput, setShowPatInput] = useState(!githubConnected)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   function copyPda() {
     if (!treasuryPda) return
     navigator.clipboard.writeText(treasuryPda)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleSavePat() {
+    if (!pat.trim()) return
+    setSaving(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/teams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminWallet,
+          githubAccessToken: pat.trim()
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? 'Failed to save token')
+        return
+      }
+
+      setPat('')
+      setShowPatInput(false)
+      onTokenSaved()
+    } catch {
+      setError('Something went wrong')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -35,7 +82,7 @@ export function TeamInfo({ repoOwner, repoName, treasuryPda, adminWallet, onInit
           <DepositSol
             teamName={repoName}
             treasuryPda={treasuryPda}
-            onDeposited={() => onInitialized(treasuryPda)}  // balance refresh karega
+            onDeposited={() => onInitialized(treasuryPda)}
           />
         )}
       </CardHeader>
@@ -78,6 +125,66 @@ export function TeamInfo({ repoOwner, repoName, treasuryPda, adminWallet, onInit
               adminWallet={adminWallet}
               onInitialized={onInitialized}
             />
+          )}
+        </div>
+
+        <div className="border-t border-purple-50 pt-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">GitHub Access</span>
+            {githubConnected ? (
+              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                Connected
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50">
+                Not connected
+              </Badge>
+            )}
+          </div>
+
+          {githubConnected && !showPatInput && (
+            <button
+              type="button"
+              onClick={() => setShowPatInput(true)}
+              className="text-xs text-purple-600 hover:underline"
+            >
+              Update PAT
+            </button>
+          )}
+
+          {showPatInput && (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-400">
+                Enter your GitHub Personal Access Token with{' '}
+                <code className="text-purple-600">repo</code> scope.{' '}
+                <a
+                  href="https://github.com/settings/tokens/new?scopes=repo&description=Solace"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-600 hover:underline"
+                >
+                  Generate one here
+                </a>
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  placeholder="ghp_xxxxxxxxxxxx"
+                  value={pat}
+                  onChange={(e) => setPat(e.target.value)}
+                  className="border-purple-100 focus-visible:ring-purple-400 text-xs"
+                />
+                <Button
+                  onClick={handleSavePat}
+                  disabled={saving || !pat.trim()}
+                  className="bg-purple-600 hover:bg-purple-700 text-white shrink-0"
+                  size="sm"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </Button>
+              </div>
+              {error && <p className="text-xs text-red-500">{error}</p>}
+            </div>
           )}
         </div>
       </CardContent>

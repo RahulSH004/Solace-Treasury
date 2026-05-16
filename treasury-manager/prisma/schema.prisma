@@ -12,6 +12,7 @@ model Team {
   adminWallet  String        @unique
   repoName     String
   treasuryPda  String?
+  githubAccessToken String? 
   createdAt    DateTime      @default(now())
   repoOwner    String
   members      Member[]

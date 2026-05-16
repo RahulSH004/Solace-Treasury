@@ -5,7 +5,8 @@ export async function createTeam(
     adminWallet: string,
     repoName: string,
     repoOwner: string,
-    treasuryPda?: string
+    treasuryPda?: string,
+    githubAccessToken?: string
 ) {
     try {
     return await prisma.team.create({
@@ -13,7 +14,8 @@ export async function createTeam(
         adminWallet,
         repoOwner,
         repoName,
-        treasuryPda: treasuryPda ?? null
+        treasuryPda: treasuryPda ?? null,
+        githubAccessToken: githubAccessToken ?? null
       }
     })
    }catch (error: any) {
@@ -50,3 +52,15 @@ export async function updateTreasuryPda(
   })
 }
 
+export async function updateTeam(
+  adminWallet: string,
+  data: {
+    treasuryPda?: string
+    githubAccessToken?: string
+  }
+) {
+  return await prisma.team.update({
+    where: { adminWallet },
+    data
+  })
+}

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { toolDeclarations, executeTool } from '@/app/lib/agent/tools'
 import { getTeamByAdminWallet } from '@/app/lib/db/team'
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,10 +19,7 @@ export async function POST(req: NextRequest) {
 
     const team = await getTeamByAdminWallet(adminWallet)
     if (!team) {
-      return NextResponse.json(
-        { error: 'Team not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Team not found' }, { status: 404 })
     }
 
     const systemPrompt = `
@@ -34,17 +31,29 @@ export async function POST(req: NextRequest) {
       - Admin Wallet: ${adminWallet}
       
       Rules:
-      - ALWAYS call resolve_wallet first to get memberId
-      - ALWAYS call get_sol_price before save_transaction
-      - Call save_transaction with memberId from resolve_wallet — NEVER invent toWallet or memberId
-      - If member not found, stop and say so clearly
-      - Be concise in your final response
+      - For "who are top contributors" or PR questions — ONLY call get_github_prs with teamId: ${team.id}, repoOwner: ${team.repoOwner}, repoName: ${team.repoName}. Do NOT call resolve_wallet for listing contributors.
+      - For payments — call resolve_wallet first to get memberId, then get_sol_price, then save_transaction
+      - Call save_transaction with memberId from resolve_wallet — NEVER invent toWallet
+      - When calling get_github_prs always pass teamId: ${team.id}
+      - If get_github_prs returns an error about PAT — tell user to add GitHub PAT on Team page
+      - If resolve_wallet fails for a payment — say clearly that member is not registered in the team
+      - Be concise in final response
     `
 
+    // Groq format — system alag message hota hai
     const messages: any[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: command }
     ]
+
+    const tools = toolDeclarations.map(t => ({
+      type: 'function' as const,
+      function: {
+        name: t.function.name,
+        description: t.function.description,
+        parameters: t.function.parameters
+      }
+    }))
 
     let finalResponse = ''
     let iterations = 0
@@ -55,46 +64,43 @@ export async function POST(req: NextRequest) {
 
       const result = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
-        messages: messages,
-        tools: toolDeclarations.map(t => ({
-          type: 'function',
-          function: {
-            name: t.function.name,
-            description: t.function.description,
-            parameters: t.function.parameters
-          }
-        })),
+        messages,
+        tools,
         tool_choice: 'auto'
       })
 
-      const data = result.choices?.[0]?.message
-      console.log('[Agent] Raw response:', JSON.stringify(data, null, 2))  // ← add karo
+      const message = result.choices[0].message
+      console.log('[Agent] Raw response:', JSON.stringify(message, null, 2))
+
       // Tool calls hain?
-      if (data?.tool_calls && data.tool_calls.length > 0) {
-        // Model ka response history mein daalo
-        messages.push(data)
-
-        // Har tool execute karo
-        for (const toolCall of data.tool_calls) {
-          const name = toolCall.function.name
-          const args = JSON.parse(toolCall.function.arguments)
-          console.log(`[Agent] Executing tool: ${name}`, args)
-
-          const result = await executeTool(name, args)
-          console.log(`[Agent] Tool result: ${name}`, result)
-
-          // Result history mein daalega
-          messages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: JSON.stringify(result)
-          })
-        }
-      } else {
-        // Koi tool call nahi
-        finalResponse = data?.content ?? ''
+      if (!message.tool_calls || message.tool_calls.length === 0) {
+        finalResponse = message.content ?? ''
         break
       }
+
+      // Model message push karo
+      messages.push(message)
+
+      // Tool calls execute karo
+      const toolResults: any[] = []
+
+      for (const toolCall of message.tool_calls) {
+        const name = toolCall.function.name
+        const args = JSON.parse(toolCall.function.arguments)
+
+        console.log(`[Agent] Executing tool: ${name}`, args)
+        const result = await executeTool(name, args)
+        console.log(`[Agent] Tool result: ${name}`, result)
+
+        toolResults.push({
+          role: 'tool' as const,
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(result)
+        })
+      }
+
+      // Tool results push karo
+      messages.push(...toolResults)
     }
 
     return NextResponse.json({
@@ -102,7 +108,7 @@ export async function POST(req: NextRequest) {
       teamId: team.id
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[POST /api/agent/command]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
